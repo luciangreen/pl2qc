@@ -94,6 +94,21 @@ cd tests && swipl test_pl2qc.pl
 The tests check the oracle against plain Prolog on every binding, check
 uncomputation, and check Grover probabilities.
 
+`tests/io_cases.pl` holds 200 input/output cases:
+`io(Id, Kind, Tag, Program, Query, Domains, Options, ExpectedSolutions)`.
+They cover facts, conjunction, disjunction, negation, `=`/`\=`, `member/2`,
+if-then-else, local variables, binary relations, chains, three query
+variables, recursion on random graphs and depth-limited recursion. Expected
+solutions come from an independent reference evaluator. Run them with:
+
+```bash
+cd tests && swipl test_io.pl
+```
+
+For each case, the runner checks the marked solutions and the marked count
+(so unused codes stay unmarked). For `exact` cases it also checks the result
+against plain Prolog.
+
 ## Limits
 
 - Domains must be finite and ground. Only the query variables are quantum.
