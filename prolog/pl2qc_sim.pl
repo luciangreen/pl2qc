@@ -30,7 +30,6 @@
 :- use_module(library(assoc)).
 :- use_module(library(aggregate)).
 :- use_module(library(error)).
-:- use_module(library(yall)).
 :- use_module(pl2qc, [oracle_circuit/2, oracle_info/2]).
 
 %% ------------------------------------------------------------------
@@ -142,8 +141,8 @@ phase_oracle(Oracle, Gates) :-
 %% H X (multi-controlled Z) X H. The oracle's ancillas are clean between
 %% oracle calls, so they are reused for the multi-controlled gate.
 diffusion(Inputs, Pool, Gates, Extra) :-
-    maplist([Q, h(Q)]>>true, Inputs, Hs),
-    maplist([Q, x(Q)]>>true, Inputs, Xs),
+    maplist(gate_h, Inputs, Hs),
+    maplist(gate_x, Inputs, Xs),
     append(Cs, [T], Inputs), !,
     mcz(Cs, T, Pool, Mid, Extra),
     append([Hs, Xs, Mid, Xs, Hs], Gates).
@@ -176,7 +175,7 @@ take_ancillas(N, Pool, As, Extra) :-
         Extra = []
     ;   NE1 is N - P - 1,
         numlist(0, NE1, Ks),
-        maplist([K, Q]>>format(atom(Q), "dif_~w", [K]), Ks, Extra),
+        maplist(dif_name, Ks, Extra),
         append(Pool, Extra, As)
     ).
 
@@ -194,11 +193,21 @@ grover_circuit(Oracle, Options, circuit(Qubits, Cbits, Gates)) :-
     length(Steps, K),
     maplist(=(Step), Steps),
     append(Steps, Body),
-    maplist([Q, h(Q)]>>true, Inputs, Init),
-    maplist([Q, C]>>format(atom(C), "c_~w", [Q]), Inputs, Cbits),
-    maplist([Q, C, measure(Q, C)]>>true, Inputs, Cbits, Ms),
+    maplist(gate_h, Inputs, Init),
+    maplist(cbit_name, Inputs, Cbits),
+    maplist(gate_measure, Inputs, Cbits, Ms),
     append([Init, Body, Ms], Gates),
     append(OQs, Extra, Qubits).
+
+gate_h(Q, h(Q)).
+gate_x(Q, x(Q)).
+gate_measure(Q, C, measure(Q, C)).
+
+dif_name(K, Q) :-
+    format(atom(Q), "dif_~w", [K]).
+
+cbit_name(Q, C) :-
+    format(atom(C), "c_~w", [Q]).
 
 input_qubits(Regs, Inputs) :-
     findall(Q, (member(reg(_, _, Qs), Regs), member(Q, Qs)), Inputs).
