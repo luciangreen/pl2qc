@@ -283,36 +283,50 @@ sv_gate(_, measure(_, _), S, S) :- !.
 sv_gate(_, barrier(_), S, S) :- !.
 sv_gate(Pos, x(Q), S0, S) :- !,
     mask(Pos, Q, M),
-    maplist([I-A, J-A]>>(J is I xor M), S0, S1),
+    maplist(sv_x(M), S0, S1),
     keysort(S1, S).
 sv_gate(Pos, cx(C, T), S0, S) :- !,
     mask(Pos, C, MC),
     mask(Pos, T, MT),
-    maplist([I-A, J-A]>>( I /\ MC =:= 0 -> J = I ; J is I xor MT ), S0, S1),
+    maplist(sv_cx(MC, MT), S0, S1),
     keysort(S1, S).
 sv_gate(Pos, ccx(A, B, T), S0, S) :- !,
     mask(Pos, A, MA),
     mask(Pos, B, MB),
     mask(Pos, T, MT),
     MAB is MA \/ MB,
-    maplist([I-V, J-V]>>( I /\ MAB =:= MAB -> J is I xor MT ; J = I ), S0, S1),
+    maplist(sv_cx(MAB, MT), S0, S1),
     keysort(S1, S).
 sv_gate(Pos, z(Q), S0, S) :- !,
     mask(Pos, Q, M),
-    maplist([I-A, I-B]>>( I /\ M =:= 0 -> B = A ; B is -A ), S0, S).
+    maplist(sv_z(M), S0, S).
 sv_gate(Pos, h(Q), S0, S) :- !,
     mask(Pos, Q, M),
     R is sqrt(0.5),
-    foldl([I-A, L0, L]>>( I0 is I /\ \M,
-                          I1 is I0 \/ M,
-                          A0 is R * A,
-                          (   I /\ M =:= 0 -> A1 is R * A ; A1 is -R * A ),
-                          L = [I0-A0, I1-A1|L0]
-                        ), S0, [], L1),
+    foldl(sv_h(M, R), S0, [], L1),
     keysort(L1, L2),
     merge_amps(L2, S).
 sv_gate(_, G, _, _) :-
     domain_error(pl2qc_gate, G).
+
+% Helpers kept as plain predicates rather than yall lambdas: inside a
+% lambda, yall reads \X as "X is local", which broke bitwise negation.
+sv_x(M, I-A, J-A) :-
+    J is I xor M.
+
+% Flip the target bits T when all control bits C are set
+% (one control for cx, two for ccx).
+sv_cx(C, T, I-A, J-A) :-
+    (   I /\ C =:= C -> J is I xor T ; J = I ).
+
+sv_z(M, I-A, I-B) :-
+    (   I /\ M =:= 0 -> B = A ; B is -A ).
+
+sv_h(M, R, I-A, L0, [I0-A0, I1-A1|L0]) :-
+    I0 is I - (I /\ M),
+    I1 is I0 + M,
+    A0 is R * A,
+    (   I /\ M =:= 0 -> A1 is R * A ; A1 is -R * A ).
 
 merge_amps([], []).
 merge_amps([K-A|T], Out) :-
