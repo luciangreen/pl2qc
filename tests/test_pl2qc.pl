@@ -21,7 +21,9 @@ tests([ xor, conjunction, clauses, negation, if_then_else, local_variable,
         exported_binding, member, register_equality, non_power_of_two,
         recursion_full, recursion_depth_limit, file_loading, sharing,
         grover_one_of_four, grover_one_of_eight, grover_path,
-        grover_restores_ancillas, qasm_export ]).
+        grover_restores_ancillas, qasm_export,
+        arith_sum, arith_is_register, arith_between, arith_counter,
+        arith_unbound_error, grover_arith ]).
 
 main :-
     tests(Ts),
@@ -208,3 +210,39 @@ test(qasm_export) :-
     circuit_to_qasm(C, QASM),
     sub_atom(QASM, 0, _, _, 'OPENQASM 2.0;'),
     sub_atom(QASM, _, _, _, 'ccx q[').
+
+test(arith_sum) :-
+    P = [(q(X, Y) :- S is X + Y, S =:= 3)],
+    agrees(P, q(A, B), [A-[0,1,2,3], B-[0,1,2,3]], []),
+    expect_solutions(P, q(A, B), [A-[0,1,2,3], B-[0,1,2,3]], [],
+                     [[0,3],[1,2],[2,1],[3,0]]).
+
+test(arith_is_register) :-
+    % The result of is/2 is itself a query register.
+    P = [(double(X, Y) :- Y is 2 * X)],
+    agrees(P, double(A, B), [A-[0,1,2,3], B-[0,1,2,3,4,5,6]], []).
+
+test(arith_between) :-
+    P = [(q(X) :- between(2, 4, X), X =\= 3)],
+    agrees(P, q(V), [V-[0,1,2,3,4,5]], []).
+
+test(arith_counter) :-
+    % Recursion that counts path length.
+    P = [ edge(a, b), edge(b, c), edge(a, c),
+          (steps(X, Y, N) :- edge(X, Y), N is 1),
+          (steps(X, Y, N) :- edge(X, Z), steps(Z, Y, M), N is M + 1) ],
+    agrees(P, steps(A, B, C), [A-[a,b,c], B-[a,b,c], C-[1,2,3]], [depth(5)]).
+
+test(arith_unbound_error) :-
+    % As in Prolog, an expression with an unbound local variable is an error.
+    P = [(q(X) :- Y > X)],
+    catch((pl2qc(P, q(V), [V-[0,1]], [], _), E = none), Err, E = Err),
+    subsumes_term(error(instantiation_error, _), E).
+
+test(grover_arith) :-
+    % One of 16 pairs has X + Y = 5 and X > Y: (3, 2).
+    P = [(q(X, Y) :- S is X + Y, S =:= 5, X > Y)],
+    pl2qc(P, q(A, B), [A-[0,1,2,3], B-[0,1,2,3]], [], O),
+    oracle_solutions(O, [[3, 2]]),
+    grover_run(O, [], [Prob-[3, 2]|_]),
+    Prob > 0.9.

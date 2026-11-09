@@ -23,7 +23,8 @@
 %%      uncomputed (Bennett), so ancillas return to |0>.
 %%
 %% Supported goals: true, fail, false, (A,B), (A;B), (C->T;E), (C->T),
-%% \+ G, A = B, A \= B, member(X, List) and calls to program predicates.
+%% \+ G, A = B, A \= B, member(X, List), R is E, the comparisons
+%% <, >, =<, >=, =:=, =\=, between(L, H, X) and calls to program predicates.
 %% If-then-else is compiled as (C,T ; \+ C, E), which equals Prolog's
 %% committed choice unless C has several solutions that disagree on T.
 %% Recursion is unrolled to depth(D) nested calls (default 8); deeper
@@ -219,6 +220,9 @@ branch(member(X, L), Ctx, D, F) :- !,
     must_be(list, L),
     member(E, L),
     branch(X = E, Ctx, D, F).
+branch(G, Ctx, _, F) :-
+    arithmetic_goal(G), !,
+    arith_branch(G, Ctx, F).
 branch(G, Ctx, D, F) :-
     callable(G), !,
     Ctx = ctx(Program, _),
@@ -236,6 +240,70 @@ branch(G, Ctx, D, F) :-
     member(Vs-F, Groups).
 branch(G, _, _, _) :-
     type_error(callable, G).
+
+%% Arithmetic: is/2, the comparisons and between/3.
+%% Query registers used in the goal are case-split over their domain
+%% values; each combination for which the goal holds is one branch,
+%% guarded by eqc/2 constraints. The circuit is therefore a lookup over
+%% register values, not a reversible adder. Local variables in an
+%% expression must already be bound, as in Prolog.
+arithmetic_goal(G) :-
+    compound(G),
+    (   G = (_ is _)
+    ;   G = between(_, _, _)
+    ;   functor(G, Op, 2),
+        memberchk(Op, [<, >, =<, >=, =:=, =\=])
+    ), !.
+
+arith_branch(G, ctx(_, Regs), and(Cs)) :-
+    q_names(G, Ns),
+    choose_values(Ns, Regs, Map, Cs),
+    subst_q(G, Map, G2),
+    arith_goal(G2).
+
+choose_values([], _, [], []).
+choose_values([N|Ns], Regs, [N-V|Map], [eqc(N, V)|Cs]) :-
+    memberchk(reg(N, Vs, _), Regs),
+    member(V, Vs),
+    choose_values(Ns, Regs, Map, Cs).
+
+arith_goal(R is E) :- !,
+    (   ground(E) -> true ; instantiation_error(E) ),
+    Value is E,
+    R = Value.
+arith_goal(between(L, H, X)) :- !,
+    between(L, H, X).
+arith_goal(G) :-
+    G =.. [_, A, B],
+    (   ground(A-B) -> true ; instantiation_error(G) ),
+    call(G).
+
+q_names(T, Ns) :-
+    q_names(T, [], Ns0),
+    sort(Ns0, Ns).
+
+q_names(T, A, A) :-
+    var(T), !.
+q_names('$q'(N), A, [N|A]) :- !.
+q_names(T, A0, A) :-
+    compound(T), !,
+    T =.. [_|Args],
+    foldl(q_names, Args, A0, A).
+q_names(_, A, A).
+
+subst_q(T, _, T) :-
+    var(T), !.
+subst_q('$q'(N), Map, V) :- !,
+    memberchk(N-V, Map).
+subst_q(T, Map, T2) :-
+    compound(T), !,
+    T =.. [F|Args],
+    maplist(subst_q_arg(Map), Args, Args2),
+    T2 =.. [F|Args2].
+subst_q(T, _, T).
+
+subst_q_arg(Map, A, B) :-
+    subst_q(A, Map, B).
 
 %% derivation(+Goal, +Ctx, +Depth, -Formula): resolve Goal with one clause.
 derivation(G, Ctx, D, and([and(Cs), FB])) :-

@@ -1,4 +1,4 @@
-%% io_cases.pl - 200 input/output cases for pl2qc.
+%% io_cases.pl - 240 input/output cases for pl2qc (201-240 use arithmetic).
 %% io(Id, Kind, Tag, Program, Query, Domains, Options, ExpectedSolutions)
 %%   Kind = exact: ExpectedSolutions are also what plain Prolog finds.
 %%   Kind = depth_limited: expected under pl2qc's depth(D) unrolling, where
@@ -206,3 +206,43 @@ io(197, exact, nested_negation, [p(a), p(b), r(b), (s(X) :- (\+ r(X))), (q(X) :-
 io(198, exact, nested_negation, [p(0), r(0), (s(X) :- (\+ r(X))), (q(X) :- ((p(X), s(X)) ; (\+ p(X))))], q(A), [A-[0]], [], []).
 io(199, exact, nested_negation, [p(1), p(4), r(2), r(3), (s(X) :- (\+ r(X))), (q(X) :- ((p(X), s(X)) ; (\+ p(X))))], q(A), [A-[0,1,2,3,4]], [], [[0],[1],[2],[3],[4]]).
 io(200, exact, nested_negation, [p(2), p(3), p(4), r(1), r(2), r(3), r(4), (s(X) :- (\+ r(X))), (q(X) :- ((p(X), s(X)) ; (\+ p(X))))], q(A), [A-[0,1,2,3,4]], [], [[0],[1]]).
+io(201, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S >= 4)))], q(A,B), [A-[0,1,2], B-[0,1,2,3]], [], [[1,3],[2,2],[2,3]]).
+io(202, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S >= 4)))], q(A,B), [A-[0,1,2,3], B-[0,1,2]], [], [[2,2],[3,1],[3,2]]).
+io(203, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S =\= 1)))], q(A,B), [A-[0,1,2], B-[0,1,2,3,4]], [], [[0,0],[0,2],[0,3],[0,4],[1,1],[1,2],[1,3],[1,4],[2,0],[2,1],[2,2],[2,3],[2,4]]).
+io(204, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S < 4)))], q(A,B), [A-[0,1,2,3,4], B-[0,1,2]], [], [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[3,0]]).
+io(205, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S =< 2)))], q(A,B), [A-[0,1,2], B-[0,1,2,3,4]], [], [[0,0],[0,1],[0,2],[1,0],[1,1],[2,0]]).
+io(206, exact, arith_sum, [(q(X,Y) :- ((S is (X + Y)), (S =\= 6)))], q(A,B), [A-[0,1,2], B-[0,1,2]], [], [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]]).
+io(207, exact, arith_compare, [(q(X) :- (X >= 7))], q(A), [A-[0,1,2,3]], [], []).
+io(208, exact, arith_compare, [(q(X) :- (X =< 1))], q(A), [A-[0,1,2,3]], [], [[0],[1]]).
+io(209, exact, arith_compare, [(q(X) :- (X < 7))], q(A), [A-[0,1,2,3,4,5]], [], [[0],[1],[2],[3],[4],[5]]).
+io(210, exact, arith_compare, [(q(X) :- (X < 4))], q(A), [A-[0,1,2,3,4,5]], [], [[0],[1],[2],[3]]).
+io(211, exact, arith_compare, [(q(X) :- (X > 6))], q(A), [A-[0,1,2,3,4,5]], [], []).
+io(212, exact, arith_compare, [(q(X) :- (X >= 6))], q(A), [A-[0,1,2,3]], [], []).
+io(213, exact, arith_is, [(q(X,Y) :- (Y is ((X * 3) + 0)))], q(A,B), [A-[0,1,2,3,4], B-[0,1,2,3,4,5]], [], [[0,0],[1,3]]).
+io(214, exact, arith_is, [(q(X,Y) :- (Y is ((X * 1) + 2)))], q(A,B), [A-[0,1,2], B-[0,1,2,3,4,5]], [], [[0,2],[1,3],[2,4]]).
+io(215, exact, arith_is, [(q(X,Y) :- (Y is ((X * 1) + 2)))], q(A,B), [A-[0,1,2,3,4], B-[0,1,2,3,4,5,6]], [], [[0,2],[1,3],[2,4],[3,5],[4,6]]).
+io(216, exact, arith_is, [(q(X,Y) :- (Y is ((X * 1) + 1)))], q(A,B), [A-[0,1,2], B-[0,1,2,3]], [], [[0,1],[1,2],[2,3]]).
+io(217, exact, arith_is, [(q(X,Y) :- (Y is ((X * 1) + 2)))], q(A,B), [A-[0,1,2,3,4], B-[0,1,2,3,4,5,6,7,8]], [], [[0,2],[1,3],[2,4],[3,5],[4,6]]).
+io(218, exact, arith_mod, [(q(X) :- ((M is (X mod 2)), (M =:= 0)))], q(A), [A-[0,1,2,3,4,5,6,7,8,9]], [], [[0],[2],[4],[6],[8]]).
+io(219, exact, arith_mod, [(q(X) :- ((M is (X mod 4)), (M =:= 1)))], q(A), [A-[0,1,2,3,4,5,6,7,8,9]], [], [[1],[5],[9]]).
+io(220, exact, arith_mod, [(q(X) :- ((M is (X mod 2)), (M =:= 1)))], q(A), [A-[0,1,2,3,4,5,6,7,8,9]], [], [[1],[3],[5],[7],[9]]).
+io(221, exact, arith_mod, [(q(X) :- ((M is (X mod 3)), (M =:= 1)))], q(A), [A-[0,1,2,3,4,5,6]], [], [[1],[4]]).
+io(222, exact, arith_mod, [(q(X) :- ((M is (X mod 2)), (M =:= 0)))], q(A), [A-[0,1,2,3,4,5,6,7,8]], [], [[0],[2],[4],[6],[8]]).
+io(223, exact, arith_between, [(q(X) :- between(2,4,X))], q(A), [A-[0,1,2,3,4,5,6]], [], [[2],[3],[4]]).
+io(224, exact, arith_between, [(q(X) :- between(1,3,X))], q(A), [A-[0,1,2,3,4,5]], [], [[1],[2],[3]]).
+io(225, exact, arith_between, [(q(X) :- between(2,2,X))], q(A), [A-[0,1,2,3,4,5,6]], [], [[2]]).
+io(226, exact, arith_between, [(q(X) :- between(2,3,X))], q(A), [A-[0,1,2,3,4,5]], [], [[2],[3]]).
+io(227, exact, arith_facts, [cost(a,2), cost(b,2), (q(X) :- (cost(X,Y), (\+ (Y > 5))))], q(A), [A-[a,b]], [], [[a],[b]]).
+io(228, exact, arith_facts, [cost(a,8), cost(b,3), cost(c,4), cost(d,7), (q(X) :- (cost(X,Y), (\+ (Y > 8))))], q(A), [A-[a,b,c,d]], [], [[a],[b],[c],[d]]).
+io(229, exact, arith_facts, [cost(a,2), cost(b,9), cost(c,8), (q(X) :- (cost(X,Y), (Y =< 7)))], q(A), [A-[a,b,c]], [], [[a]]).
+io(230, exact, arith_facts, [cost(a,2), cost(b,1), (q(X) :- (cost(X,Y), (\+ (Y > 7))))], q(A), [A-[a,b]], [], [[a],[b]]).
+io(231, exact, arith_three, [(q(X,Y,Z) :- (Z =:= max(X,Y)))], q(A,B,C), [A-[0,1,2,3], B-[0,1,2,3], C-[0,1,2,3,4,5,6]], [], [[0,0,0],[0,1,1],[0,2,2],[0,3,3],[1,0,1],[1,1,1],[1,2,2],[1,3,3],[2,0,2],[2,1,2],[2,2,2],[2,3,3],[3,0,3],[3,1,3],[3,2,3],[3,3,3]]).
+io(232, exact, arith_three, [(q(X,Y,Z) :- (Z =:= max(X,Y)))], q(A,B,C), [A-[0,1,2], B-[0,1,2], C-[0,1,2,3,4]], [], [[0,0,0],[0,1,1],[0,2,2],[1,0,1],[1,1,1],[1,2,2],[2,0,2],[2,1,2],[2,2,2]]).
+io(233, exact, arith_three, [(q(X,Y,Z) :- (Z =:= min(X,Y)))], q(A,B,C), [A-[0,1,2], B-[0,1,2], C-[0,1,2,3,4,5,6]], [], [[0,0,0],[0,1,0],[0,2,0],[1,0,0],[1,1,1],[1,2,1],[2,0,0],[2,1,1],[2,2,2]]).
+io(234, exact, arith_three, [(q(X,Y,Z) :- (Z =:= min(X,Y)))], q(A,B,C), [A-[0,1,2,3], B-[0,1,2,3], C-[0,1,2,3,4]], [], [[0,0,0],[0,1,0],[0,2,0],[0,3,0],[1,0,0],[1,1,1],[1,2,1],[1,3,1],[2,0,0],[2,1,1],[2,2,2],[2,3,2],[3,0,0],[3,1,1],[3,2,2],[3,3,3]]).
+io(235, exact, arith_recursion, [edge(a,b), edge(a,c), edge(b,c), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b,c], B-[a,b,c], C-[1,2,3]], [depth(5)], [[a,b,1],[a,c,1],[a,c,2],[b,c,1]]).
+io(236, exact, arith_recursion, [edge(b,c), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b,c], B-[a,b,c], C-[1,2,3]], [depth(5)], [[b,c,1]]).
+io(237, exact, arith_recursion, [edge(a,b), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b], B-[a,b], C-[1,2,3]], [depth(4)], [[a,b,1]]).
+io(238, exact, arith_recursion, [edge(a,b), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b,c,d], B-[a,b,c,d], C-[1,2,3]], [depth(6)], [[a,b,1]]).
+io(239, exact, arith_recursion, [edge(a,b), edge(b,d), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b,c,d], B-[a,b,c,d], C-[1,2,3]], [depth(6)], [[a,b,1],[a,d,2],[b,d,1]]).
+io(240, exact, arith_recursion, [edge(a,c), (steps(X,Y,N) :- (edge(X,Y), (N is 1))), (steps(X,Y,N) :- (edge(X,Z), (steps(Z,Y,M), (N is (M + 1)))))], steps(A,B,C), [A-[a,b,c], B-[a,b,c], C-[1,2,3]], [depth(5)], [[a,c,1]]).

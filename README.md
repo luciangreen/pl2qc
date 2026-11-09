@@ -36,8 +36,28 @@ pl2q for decomposition, optimisation, simulation or export.
 | Search over bindings | `H` on inputs, then Grover iterations (phase oracle + diffusion) |
 
 Supported goals: `true`, `fail`, `false`, `(A,B)`, `(A;B)`, `(C->T;E)`,
-`(C->T)`, `\+ G`, `A = B`, `A \= B`, `member(X, List)`, and calls to program
-predicates.
+`(C->T)`, `\+ G`, `A = B`, `A \= B`, `member(X, List)`, `R is E`, the
+comparisons `<`, `>`, `=<`, `>=`, `=:=`, `=\=`, `between(L, H, X)`, and calls
+to program predicates.
+
+### Arithmetic
+
+For arithmetic goals, pl2qc enumerates the domain values of any query
+registers the goal uses, evaluates the arithmetic classically for each
+combination, and marks the combinations where the goal holds:
+
+```prolog
+?- pl2qc([(q(X,Y) :- S is X + Y, S =:= 3)], q(A,B),
+         [A-[0,1,2,3], B-[0,1,2,3]], [], O),
+   oracle_solutions(O, S).
+S = [[0,3],[1,2],[2,1],[3,0]].
+```
+
+Local variables bound by earlier goals work as in Prolog, including
+counters in recursion (`N is M + 1`). An expression with an unbound
+variable raises `instantiation_error`, as in Prolog. The oracle is a lookup
+over register values, not a reversible adder, so its size grows with the
+product of the domains the goal uses.
 
 ## Usage
 
@@ -94,11 +114,12 @@ cd tests && swipl test_pl2qc.pl
 The tests check the oracle against plain Prolog on every binding, check
 uncomputation, and check Grover probabilities.
 
-`tests/io_cases.pl` holds 200 input/output cases:
+`tests/io_cases.pl` holds 240 input/output cases:
 `io(Id, Kind, Tag, Program, Query, Domains, Options, ExpectedSolutions)`.
 They cover facts, conjunction, disjunction, negation, `=`/`\=`, `member/2`,
 if-then-else, local variables, binary relations, chains, three query
-variables, recursion on random graphs and depth-limited recursion. Expected
+variables, recursion on random graphs, depth-limited recursion and (cases
+201–240) arithmetic, including a path-length counter. Expected
 solutions come from an independent reference evaluator. Run them with:
 
 ```bash
@@ -116,8 +137,7 @@ against plain Prolog.
   off by the depth limit succeeds.
 - `(C->T;E)` is compiled as `(C,T ; \+C, E)`. This matches Prolog unless `C`
   has several solutions that disagree on `T`.
-- Not supported: `!`, arithmetic (`is/2`, comparisons), `assert`/`retract`
-  and I/O.
+- Not supported: `!`, `assert`/`retract` and I/O.
 - Recursion is unrolled linearly. Log-depth restructuring (such as repeated
   squaring for transitive closure) and quantum counting are not implemented.
   The Grover iteration count is computed from a classical count of M.
