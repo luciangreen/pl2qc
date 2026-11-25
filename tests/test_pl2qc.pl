@@ -19,7 +19,8 @@
 
 tests([ xor, conjunction, clauses, negation, if_then_else, local_variable,
         exported_binding, member, register_equality, non_power_of_two,
-        recursion_full, recursion_depth_limit, file_loading, sharing,
+        recursion_full, recursion_depth_limit, depth_limit_error,
+        depth_limit_silent, file_loading, sharing,
         grover_one_of_four, grover_one_of_eight, grover_path,
         grover_restores_ancillas, qasm_export,
         arith_sum, arith_is_register, arith_between, arith_counter,
@@ -147,6 +148,22 @@ test(recursion_depth_limit) :-
     % depth(2): path -> edge only, so just the direct edges.
     graph(P),
     expect_solutions(P, path(A, B), [A-[a,b,c,d], B-[a,b,c,d]], [depth(2)],
+                     [[a,b],[b,c],[c,d]]).
+
+test(depth_limit_error) :-
+    % on_depth(error): the cut-off is an error, not a silent loss.
+    graph(P),
+    catch(( pl2qc(P, path(A, B), [A-[a,b,c,d], B-[a,b,c,d]], [depth(2), on_depth(error)], _),
+            Thrown = none ),
+          error(depth_limit(2), _), Thrown = depth_limit),
+    Thrown == depth_limit,
+    % a depth that reaches the bottom of every derivation raises nothing
+    pl2qc(P, path(A, B), [A-[a,b,c,d], B-[a,b,c,d]], [depth(6), on_depth(error)], _).
+
+test(depth_limit_silent) :-
+    % on_depth(silent): the same oracle as before, with no warning
+    graph(P),
+    expect_solutions(P, path(A, B), [A-[a,b,c,d], B-[a,b,c,d]], [depth(2), on_depth(silent)],
                      [[a,b],[b,c],[c,d]]).
 
 test(file_loading) :-

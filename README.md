@@ -76,7 +76,10 @@ product of the domains the goal uses.
 - `Program`: list of clauses. Use `pl2qc_file/5` to read them from a file.
 - `Domains`: one `Var-Values` pair per query variable.
 - `Options`: `depth(D)` sets the recursion unrolling depth (default 8);
-  `names(Names)` sets the register names (default `r1`, `r2`, …).
+  `on_depth(Mode)` says what happens when recursion is cut off by that depth:
+  `warn` (the default) prints a warning, `error` throws `error(depth_limit(D), _)`
+  and `silent` says nothing; `names(Names)` sets the register names (default
+  `r1`, `r2`, …).
 - `Oracle`: `oracle(circuit(Qubits, [], Gates), info(Registers, Out, Ancillas, Formula))`.
 
 Recursive example (`examples/path.pl`):
@@ -134,7 +137,8 @@ against plain Prolog.
 
 - Domains must be finite and ground. Only the query variables are quantum.
 - Recursion deeper than `depth(D)` counts as failure, so `\+` of a goal cut
-  off by the depth limit succeeds.
+  off by the depth limit succeeds. This is no longer silent: a warning is
+  printed, or an error thrown with `on_depth(error)`.
 - `(C->T;E)` is compiled as `(C,T ; \+C, E)`. This matches Prolog unless `C`
   has several solutions that disagree on `T`.
 - Not supported: `!`, `assert`/`retract` and I/O.
