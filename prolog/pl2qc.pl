@@ -28,7 +28,7 @@
 %% If-then-else is compiled as (C,T ; \+ C, E), which equals Prolog's
 %% committed choice unless C has several solutions that disagree on T.
 %% Recursion is unrolled to depth(D) nested calls (default 8); deeper
-%% derivations count as failure.
+%% derivations count as failure, and a warning says so (see on_depth/1).
 
 :- module(pl2qc, [
     pl2qc/5,            % +Program, +Query, +Domains, +Options, -Oracle
@@ -54,6 +54,7 @@
 %%   Query:   goal whose variables are listed in Domains
 %%   Domains: list of Var-Values, e.g. [X-[0,1,2,3]]
 %%   Options: depth(D)        recursion unrolling depth (default 8)
+%%            on_depth(Mode)  when recursion is cut off: warn (default), error, silent
 %%            names(Names)    register names, one per domain (default r1, r2, ...)
 %%   Oracle:  oracle(circuit(Qubits, [], Gates), info(Registers, Out, Ancillas, Formula))
 %%            Registers = [reg(Name, Values, BitQubits)], bit qubit 0 is the LSB.
@@ -114,9 +115,40 @@ compile_formula(Program0, Query0, Domains0, Options, Formula, Regs) :-
     make_registers(Domains, Options, Regs),
     option_depth(Options, Depth),
     Ctx = ctx(Program, Regs),
-    goal_formula(Query, Ctx, Depth, F0),
+    goal_formula(Query, Ctx, Depth, F00),
+    depth_report(F00, Depth, Options, F0),
     validity_formulas(Regs, Valid),
     simp(and([F0|Valid]), Formula).
+
+%% depth_report(+Formula0, +Depth, +Options, -Formula)
+%% A call cut off by the depth limit counts as failure, as before, but is no
+%% longer silent: on_depth(warn) (the default) prints a warning, on_depth(error)
+%% throws error(depth_limit(D), _), and on_depth(silent) says nothing.
+depth_report(F0, Depth, Options, F) :-
+    replace_cut(F0, F, Cut),
+    (   Cut == true
+    ->  (   memberchk(on_depth(Mode), Options) -> true ; Mode = warn ),
+        (   Mode == error
+        ->  throw(error(depth_limit(Depth), context(pl2qc/5, 'recursion was cut off; raise depth(D)')))
+        ;   Mode == silent
+        ->  true
+        ;   format(user_error, "Warning: pl2qc: recursion was cut off at depth(~w); deeper solutions are lost and \\+ of a cut-off goal succeeds. Raise depth(D), or pass on_depth(silent).~n", [Depth])
+        )
+    ;   true
+    ).
+
+replace_cut(depth_cut, false, true) :- !.
+replace_cut(T, T, _) :-
+    \+ compound(T), !.
+replace_cut(T0, T, Cut) :-
+    T0 =.. [Name|Args0],
+    replace_cut_list(Args0, Args, Cut),
+    T =.. [Name|Args].
+
+replace_cut_list([], [], _).
+replace_cut_list([A0|As0], [A|As], Cut) :-
+    replace_cut(A0, A, Cut),
+    replace_cut_list(As0, As, Cut).
 
 normalise_clause(Clause, _) :-
     var(Clause), !,
@@ -232,12 +264,14 @@ branch(G, Ctx, D, F) :-
     ->  true
     ;   existence_error(procedure, Name/Arity)
     ),
-    D > 0,
-    D1 is D - 1,
-    term_variables(G, Vs),
-    findall(Vs-FD, derivation(G, Ctx, D1, FD), Pairs),
-    group_alternatives(Pairs, Groups),
-    member(Vs-F, Groups).
+    (   D =:= 0
+    ->  F = depth_cut                % marked, so the cut-off can be reported
+    ;   D1 is D - 1,
+        term_variables(G, Vs),
+        findall(Vs-FD, derivation(G, Ctx, D1, FD), Pairs),
+        group_alternatives(Pairs, Groups),
+        member(Vs-F, Groups)
+    ).
 branch(G, _, _, _) :-
     type_error(callable, G).
 
